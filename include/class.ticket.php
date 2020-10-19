@@ -4852,32 +4852,7 @@ implements RestrictedAccess, Threadable , JsonSerializable {
 
     static function registerCustomData(DynamicForm $form) {
         if (!isset(static::$meta['joins']['cdata+'.$form->id])) {
-            $cdata_class = <<<EOF
-class DynamicForm{$form->id} extends DynamicForm {
-    static function getInstance() {
-        static \$instance;
-        if (!isset(\$instance))
-            \$instance = static::lookup({$form->id});
-        return \$instance;
-    }
-}
-class TicketCdataForm{$form->id}
-extends VerySimpleModel {
-    static \$meta = array(
-        'view' => true,
-        'pk' => array('ticket_id'),
-        'joins' => array(
-            'ticket' => array(
-                'constraint' => array('ticket_id' => 'Ticket.ticket_id'),
-            ),
-        )
-    );
-    static function getQuery(\$compiler) {
-        return '('.DynamicForm{$form->id}::getCrossTabQuery('T', 'ticket_id').')';
-    }
-}
-EOF;
-            eval($cdata_class);
+            $cdata_class = eval($cdata_class);
             $join = array(
                 'constraint' => array('ticket_id' => 'TicketCdataForm'.$form->id.'.ticket_id'),
                 'list' => true,
@@ -4896,18 +4871,4 @@ EOF;
 }
 RolePermission::register(/* @trans */ 'Tickets', Ticket::getPermissions(), true);
 
-class TicketCData extends VerySimpleModel {
-    static $meta = array(
-        'pk' => array('ticket_id'),
-        'joins' => array(
-            'ticket' => array(
-                'constraint' => array('ticket_id' => 'Ticket.ticket_id'),
-            ),
-            ':priority' => array(
-                'constraint' => array('priority' => 'Priority.priority_id'),
-                'null' => true,
-            ),
-        ),
-    );
-}
 TicketCData::$meta['table'] = TABLE_PREFIX . 'ticket__cdata';
