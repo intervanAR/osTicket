@@ -789,7 +789,7 @@ class ThreadEntryMergeInfo extends VerySimpleModel {
 }
 
 class ThreadEntry extends VerySimpleModel
-implements TemplateVariable {
+implements TemplateVariable , JsonSerializable {
     static $meta = array(
         'table' => THREAD_ENTRY_TABLE,
         'pk' => array('id'),
@@ -1876,6 +1876,29 @@ implements TemplateVariable {
     static function getTypes() {
         return self::$types;
     }
+    
+    public function jsonSerialize() {
+        return [
+            "id" => $this->getId(),
+            "pid" => $this->getPid(),
+            "thread_id" => $this->getThreadId(),
+            "staff_id" => $this->getStaffId() ,
+            "user_id" => $this->getUserId() ,
+            "type" => $this-> getType(),
+            "poster" => $this->getPoster(),
+            "editor" => $this-> getEditor(),
+            "source" => $this-> getSource(),
+            "title" => $this->getTitle(),
+            "body"=> $this->getBody()->getClean(),
+            "message"=>$this->getMessage(),
+            "format" => $this-> format,
+            "created"=> $this->created ,
+            "updated" => $this->updated,
+            "staff_name" => $this->getStaff() ? $this->getStaff()->getName(): null ,
+            "user_name" => $this->getUser() ?  $this->getUser()->getName() : null
+        
+        ];
+    }
 }
 
 RolePermission::register(/* @trans */ 'Tickets', ThreadEntry::getPermissions());
@@ -2447,8 +2470,10 @@ class CloseEvent extends ThreadEvent {
 
     function getDescription($mode=self::MODE_STAFF) {
         if ($this->getData('status'))
+
             return $this->template(__('Closed by <b>{somebody}</b> with status of {<TicketStatus>data.status} {timestamp}'), $mode);
         else
+
             return $this->template(__('Closed by <b>{somebody}</b> {timestamp}'), $mode);
     }
 }

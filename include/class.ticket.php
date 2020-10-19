@@ -200,6 +200,104 @@ implements RestrictedAccess, Threadable, Searchable {
             /* @trans */ 'Other',
             );
 
+    function getId() {
+        return $this->ticket_id;
+    }
+
+    function getEffectiveDate() {
+         return Format::datetime(max(
+             strtotime($this->thread->lastmessage),
+             strtotime($this->closed),
+             strtotime($this->reopened),
+             strtotime($this->created)
+         ));
+    }
+
+    static function registerCustomData(DynamicForm $form) {
+        if (!isset(static::$meta['joins']['cdata+'.$form->id])) {
+            $cdata_class = <<<EOF
+class DynamicForm{$form->id} extends DynamicForm {
+    static function getInstance() {
+        static \$instance;
+        if (!isset(\$instance))
+            \$instance = static::lookup({$form->id});
+        return \$instance;
+    }
+}
+class TicketCdataForm{$form->id}
+extends VerySimpleModel {
+    static \$meta = array(
+        'view' => true,
+        'pk' => array('ticket_id'),
+        'joins' => array(
+            'ticket' => array(
+                'constraint' => array('ticket_id' => 'TicketModel.ticket_id'),
+            ),
+        )
+    );
+    static function getQuery(\$compiler) {
+        return '('.DynamicForm{$form->id}::getCrossTabQuery('T', 'ticket_id').')';
+    }
+}
+EOF;
+            eval($cdata_class);
+            $join = array(
+                'constraint' => array('ticket_id' => 'TicketCdataForm'.$form->id.'.ticket_id'),
+                'list' => true,
+            );
+            // This may be necessary if the model has already been inspected
+            if (static::$meta instanceof ModelMeta)
+                static::$meta->addJoin('cdata+'.$form->id, $join);
+            else {
+                static::$meta['joins']['cdata+'.$form->id] = array(
+                    'constraint' => array('ticket_id' => 'TicketCdataForm'.$form->id.'.ticket_id'),
+                    'list' => true,
+                );
+            }
+        }
+    }
+
+    static function getPermissions() {
+        return self::$perms;
+    }
+
+    static function getSources() {
+        static $translated = false;
+        if (!$translated) {
+            foreach (static::$sources as $k=>$v)
+                static::$sources[$k] = __($v);
+        }
+
+        return static::$sources;
+    }
+}
+
+RolePermission::register(/* @trans */ 'Tickets', TicketModel::getPermissions(), true);
+
+class TicketCData extends VerySimpleModel {
+    static $meta = array(
+        'table' => TICKET_CDATA_TABLE,
+        'pk' => array('ticket_id'),
+        'joins' => array(
+            'ticket' => array(
+                'constraint' => array('ticket_id' => 'TicketModel.ticket_id'),
+            ),
+            ':priority' => array(
+                'constraint' => array('priority' => 'Priority.priority_id'),
+                'null' => true,
+            ),
+        ),
+    );
+}
+
+class Ticket extends TicketModel
+implements RestrictedAccess, Threadable , JsonSerializable {
+
+    static $meta = array(
+        'select_related' => array('topic', 'staff', 'user', 'team', 'dept', 'sla', 'thread',
+            'user__default_email'),
+    );
+
     var $lastMsgId;
     var $last_message;
 
@@ -3983,7 +4081,8 @@ implements RestrictedAccess, Threadable, Searchable {
      */
     static function create($vars, &$errors, $origin, $autorespond=true,
             $alertstaff=true) {
-        global $ost, $cfg, $thisstaff;
+
+                global $ost, $cfg, $thisclient, $thisstaff ,$staff;
 
         // Don't enforce form validation for email
         $field_filter = function($type) use ($origin) {
@@ -4032,6 +4131,11 @@ implements RestrictedAccess, Threadable, Searchable {
 
         if ($vars['uid'])
             $user = User::lookup($vars['uid']);
+        
+       if ($vars['assignee']){
+                $staff = Staff::lookup(array('username'=>$vars['assignee']));
+                $vars['assignId']= 's'.$staff -> getId();
+            }
 
         $id=0;
         $fields=array();
@@ -4674,7 +4778,38 @@ implements RestrictedAccess, Threadable, Searchable {
 
         require STAFFINC_DIR.'templates/tickets-actions.tmpl.php';
     }
+    
+    public function jsonSerialize() {
+        $types = array('M', 'R', 'N');
+        $threadTypes=array('M'=>'message','R'=>'response', 'N'=>'note');
+        $thread = $this->getThreadEntries($types);
+        $a = array();
+        foreach ($thread as $tentry) {
+            array_push($a , $tentry);
+        }
+        return [
 
+            'ticket_number' => $this->getNumber(),
+            'subject' => $this->getSubject(),
+            'ticket_status' => $this->getStatus()->getName(),
+            'statusId' => $this->getStatus()->getId(),
+            'priority' => $this->getPriority(),
+            'department' => $this->getDeptName(),
+            'create_timestamp' => $this->getCreateDate(),
+            'user_name' => $this->getName()->getFull(),
+            'user_email' => $this->getEmail(),
+            'user_phone' => $this->getPhoneNumber(),
+            'source' => $this->getSource(),
+            'due_timestamp' => $this->getEstDueDate(),
+            'close_timestamp' => $this->getCloseDate(),
+            'help_topic' => $this->getHelpTopic(),
+            'last_message_timestamp' => $this->getLastMsgDate(),
+            'last_response_timestamp' => $this->getLastRespDate(),
+            'assigned_to' => $this->getAssignees(),
+            'thread_entries' =>$a
+            
+        ];
+    }
     static function getLink($id) {
         global $thisstaff;
 
