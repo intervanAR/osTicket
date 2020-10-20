@@ -270,6 +270,47 @@ EOF;
 
         return static::$sources;
     }
+
+
+    function checkStaffPerm($staff, $perm=null) {
+
+        // Must be a valid staff
+        if ((!$staff instanceof Staff) && !($staff=Staff::lookup($staff)))
+            return false;
+
+        // check department access first
+        if (!$staff->canAccessDept($this->getDept())
+                // check assignment
+                && !$this->isAssigned($staff)
+                // check referral
+                && !$this->getThread()->isReferred($staff))
+            return false;
+
+        // At this point staff has view access unless a specific permission is
+        // requested
+        if ($perm === null)
+            return true;
+
+        // Permission check requested -- get role if any
+        if (!($role=$this->getRole($staff)))
+            return false;
+
+        // Check permission based on the effective role
+        return $role->hasPerm($perm);
+    }
+
+    function getThreadId() {
+        if ($this->getThread())
+            return $this->getThread()->getId();
+    }
+
+    function getThread() {
+        if (is_null($this->thread) && $this->child_thread)
+            return $this->child_thread;
+
+        return $this->thread;
+    }
+
 }
 
 RolePermission::register(/* @trans */ 'Tickets', TicketModel::getPermissions(), true);
@@ -483,33 +524,6 @@ implements RestrictedAccess, Threadable , JsonSerializable {
             return null;
 
         return $staff->getRole($this->getDept(), $this->isAssigned($staff));
-    }
-
-    function checkStaffPerm($staff, $perm=null) {
-
-        // Must be a valid staff
-        if ((!$staff instanceof Staff) && !($staff=Staff::lookup($staff)))
-            return false;
-
-        // check department access first
-        if (!$staff->canAccessDept($this->getDept())
-                // check assignment
-                && !$this->isAssigned($staff)
-                // check referral
-                && !$this->getThread()->isReferred($staff))
-            return false;
-
-        // At this point staff has view access unless a specific permission is
-        // requested
-        if ($perm === null)
-            return true;
-
-        // Permission check requested -- get role if any
-        if (!($role=$this->getRole($staff)))
-            return false;
-
-        // Check permission based on the effective role
-        return $role->hasPerm($perm);
     }
 
     function checkUserAccess($user) {
@@ -983,17 +997,6 @@ implements RestrictedAccess, Threadable , JsonSerializable {
     }
 
 
-    function getThreadId() {
-        if ($this->getThread())
-            return $this->getThread()->getId();
-    }
-
-    function getThread() {
-        if (is_null($this->thread) && $this->child_thread)
-            return $this->child_thread;
-
-        return $this->thread;
-    }
 
     function getThreadCount() {
         return $this->getClientThread()->count();
