@@ -28,7 +28,7 @@ implements Searchable {
             'ticket' => array(
                 'constraint' => array(
                     'object_type' => "'T'",
-                    'object_id' => 'Ticket.ticket_id',
+                    'object_id' => 'TicketModel.ticket_id',
                 ),
             ),
             'task' => array(
@@ -109,7 +109,7 @@ implements Searchable {
     }
 
     // Referrals
-    function getNumReferrals() {
+    function getNumReferrals() {    
         return $this->referrals->count();
     }
 
