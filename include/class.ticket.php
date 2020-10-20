@@ -311,6 +311,152 @@ EOF;
         return $this->thread;
     }
 
+    // Threadable interface
+    function postThreadEntry($type, $vars, $options=array()) {
+        $errors = array();
+        switch ($type) {
+        case 'M':
+            return $this->postMessage($vars, $vars['origin']);
+        case 'N':
+            return $this->postNote($vars, $errors);
+        case 'R':
+            return $this->postReply($vars, $errors);
+        }
+    }
+
+    function addCollaborator($user, $vars, &$errors, $event=true) {
+
+        if ($user && $user->getId() == $this->getOwnerId())
+            $errors['err'] = __('Ticket Owner cannot be a Collaborator');
+
+        if ($user && !$errors
+                && ($c = $this->getThread()->addCollaborator($user, $vars,
+                        $errors, $event))) {
+            $c->setCc($c->active);
+            $this->collaborators = null;
+            $this->recipients = null;
+            return $c;
+        }
+
+        return null;
+    }
+
+    // Searchable interface
+    static function getSearchableFields() {
+        $base = array(
+            'number' => new TextboxField(array(
+                'label' => __('Ticket Number')
+            )),
+            'created' => new DatetimeField(array(
+                'label' => __('Create Date'),
+                'configuration' => array(
+                    'fromdb' => true, 'time' => true,
+                    'format' => 'y-MM-dd HH:mm:ss'),
+            )),
+            'duedate' => new DatetimeField(array(
+                'label' => __('Due Date'),
+                'configuration' => array(
+                    'fromdb' => true, 'time' => true,
+                    'format' => 'y-MM-dd HH:mm:ss'),
+            )),
+            'est_duedate' => new DatetimeField(array(
+                'label' => __('SLA Due Date'),
+                'configuration' => array(
+                    'fromdb' => true, 'time' => true,
+                    'format' => 'y-MM-dd HH:mm:ss'),
+            )),
+            'reopened' => new DatetimeField(array(
+                'label' => __('Reopen Date'),
+                'configuration' => array(
+                    'fromdb' => true, 'time' => true,
+                    'format' => 'y-MM-dd HH:mm:ss'),
+            )),
+            'closed' => new DatetimeField(array(
+                'label' => __('Close Date'),
+                'configuration' => array(
+                    'fromdb' => true, 'time' => true,
+                    'format' => 'y-MM-dd HH:mm:ss'),
+            )),
+            'lastupdate' => new DatetimeField(array(
+                'label' => __('Last Update'),
+                'configuration' => array(
+                    'fromdb' => true, 'time' => true,
+                    'format' => 'y-MM-dd HH:mm:ss'),
+            )),
+            'assignee' => new AssigneeChoiceField(array(
+                'label' => __('Assignee'),
+            )),
+            'staff_id' => new AgentSelectionField(array(
+                'label' => __('Assigned Staff'),
+            )),
+            'team_id' => new TeamSelectionField(array(
+                'label' => __('Assigned Team'),
+            )),
+            'dept_id' => new DepartmentChoiceField(array(
+                'label' => __('Department'),
+            )),
+            'topic_id' => new HelpTopicChoiceField(array(
+                'label' => __('Help Topic'),
+            )),
+            'source' => new TicketSourceChoiceField(array(
+                'label' => __('Ticket Source'),
+            )),
+            'isoverdue' => new BooleanField(array(
+                'label' => __('Overdue'),
+                'descsearchmethods' => array(
+                    'set' => '%s',
+                    'nset' => 'Not %s'
+                    ),
+            )),
+            'isanswered' => new BooleanField(array(
+                'label' => __('Answered'),
+                'descsearchmethods' => array(
+                    'set' => '%s',
+                    'nset' => 'Not %s'
+                    ),
+            )),
+            'isassigned' => new AssignedField(array(
+                        'label' => __('Assigned'),
+            )),
+            'merged' => new MergedField(array(
+                'label' => __('Merged'),
+            )),
+            'linked' => new LinkedField(array(
+                'label' => __('Linked'),
+            )),
+            'thread_count' => new TicketThreadCountField(array(
+                        'label' => __('Thread Count'),
+            )),
+            'attachment_count' => new ThreadAttachmentCountField(array(
+                        'label' => __('Attachment Count'),
+            )),
+            'collaborator_count' => new ThreadCollaboratorCountField(array(
+                        'label' => __('Collaborator Count'),
+            )),
+            'task_count' => new TicketTasksCountField(array(
+                        'label' => __('Task Count'),
+            )),
+            'reopen_count' => new TicketReopenCountField(array(
+                        'label' => __('Reopen Count'),
+            )),
+            'ip_address' => new TextboxField(array(
+                'label' => __('IP Address'),
+                'configuration' => array('validator' => 'ip'),
+            )),
+        );
+        $tform = TicketForm::getInstance();
+        foreach ($tform->getFields() as $F) {
+            $fname = $F->get('name') ?: ('field_'.$F->get('id'));
+            if (!$F->hasData() || $F->isPresentationOnly() || !$F->isEnabled())
+                continue;
+            if (!$F->isStorable())
+                $base[$fname] = $F;
+            else
+                $base["cdata__{$fname}"] = $F;
+        }
+        return $base;
+    }
+
 }
 
 RolePermission::register(/* @trans */ 'Tickets', TicketModel::getPermissions(), true);
@@ -1316,22 +1462,6 @@ implements RestrictedAccess, Threadable , JsonSerializable {
         return $fields ? $fields[0] : null;
     }
 
-    function addCollaborator($user, $vars, &$errors, $event=true) {
-
-        if ($user && $user->getId() == $this->getOwnerId())
-            $errors['err'] = __('Ticket Owner cannot be a Collaborator');
-
-        if ($user && !$errors
-                && ($c = $this->getThread()->addCollaborator($user, $vars,
-                        $errors, $event))) {
-            $c->setCc($c->active);
-            $this->collaborators = null;
-            $this->recipients = null;
-            return $c;
-        }
-
-        return null;
-    }
 
     function addCollaborators($users, $vars, &$errors, $event=true) {
 
@@ -2362,121 +2492,6 @@ implements RestrictedAccess, Threadable , JsonSerializable {
         return $base + $extra;
     }
 
-    // Searchable interface
-    static function getSearchableFields() {
-        $base = array(
-            'number' => new TextboxField(array(
-                'label' => __('Ticket Number')
-            )),
-            'created' => new DatetimeField(array(
-                'label' => __('Create Date'),
-                'configuration' => array(
-                    'fromdb' => true, 'time' => true,
-                    'format' => 'y-MM-dd HH:mm:ss'),
-            )),
-            'duedate' => new DatetimeField(array(
-                'label' => __('Due Date'),
-                'configuration' => array(
-                    'fromdb' => true, 'time' => true,
-                    'format' => 'y-MM-dd HH:mm:ss'),
-            )),
-            'est_duedate' => new DatetimeField(array(
-                'label' => __('SLA Due Date'),
-                'configuration' => array(
-                    'fromdb' => true, 'time' => true,
-                    'format' => 'y-MM-dd HH:mm:ss'),
-            )),
-            'reopened' => new DatetimeField(array(
-                'label' => __('Reopen Date'),
-                'configuration' => array(
-                    'fromdb' => true, 'time' => true,
-                    'format' => 'y-MM-dd HH:mm:ss'),
-            )),
-            'closed' => new DatetimeField(array(
-                'label' => __('Close Date'),
-                'configuration' => array(
-                    'fromdb' => true, 'time' => true,
-                    'format' => 'y-MM-dd HH:mm:ss'),
-            )),
-            'lastupdate' => new DatetimeField(array(
-                'label' => __('Last Update'),
-                'configuration' => array(
-                    'fromdb' => true, 'time' => true,
-                    'format' => 'y-MM-dd HH:mm:ss'),
-            )),
-            'assignee' => new AssigneeChoiceField(array(
-                'label' => __('Assignee'),
-            )),
-            'staff_id' => new AgentSelectionField(array(
-                'label' => __('Assigned Staff'),
-            )),
-            'team_id' => new TeamSelectionField(array(
-                'label' => __('Assigned Team'),
-            )),
-            'dept_id' => new DepartmentChoiceField(array(
-                'label' => __('Department'),
-            )),
-            'topic_id' => new HelpTopicChoiceField(array(
-                'label' => __('Help Topic'),
-            )),
-            'source' => new TicketSourceChoiceField(array(
-                'label' => __('Ticket Source'),
-            )),
-            'isoverdue' => new BooleanField(array(
-                'label' => __('Overdue'),
-                'descsearchmethods' => array(
-                    'set' => '%s',
-                    'nset' => 'Not %s'
-                    ),
-            )),
-            'isanswered' => new BooleanField(array(
-                'label' => __('Answered'),
-                'descsearchmethods' => array(
-                    'set' => '%s',
-                    'nset' => 'Not %s'
-                    ),
-            )),
-            'isassigned' => new AssignedField(array(
-                        'label' => __('Assigned'),
-            )),
-            'merged' => new MergedField(array(
-                'label' => __('Merged'),
-            )),
-            'linked' => new LinkedField(array(
-                'label' => __('Linked'),
-            )),
-            'thread_count' => new TicketThreadCountField(array(
-                        'label' => __('Thread Count'),
-            )),
-            'attachment_count' => new ThreadAttachmentCountField(array(
-                        'label' => __('Attachment Count'),
-            )),
-            'collaborator_count' => new ThreadCollaboratorCountField(array(
-                        'label' => __('Collaborator Count'),
-            )),
-            'task_count' => new TicketTasksCountField(array(
-                        'label' => __('Task Count'),
-            )),
-            'reopen_count' => new TicketReopenCountField(array(
-                        'label' => __('Reopen Count'),
-            )),
-            'ip_address' => new TextboxField(array(
-                'label' => __('IP Address'),
-                'configuration' => array('validator' => 'ip'),
-            )),
-        );
-        $tform = TicketForm::getInstance();
-        foreach ($tform->getFields() as $F) {
-            $fname = $F->get('name') ?: ('field_'.$F->get('id'));
-            if (!$F->hasData() || $F->isPresentationOnly() || !$F->isEnabled())
-                continue;
-            if (!$F->isStorable())
-                $base[$fname] = $F;
-            else
-                $base["cdata__{$fname}"] = $F;
-        }
-        return $base;
-    }
 
     static function supportsCustomData() {
         return true;
@@ -3606,18 +3621,6 @@ implements RestrictedAccess, Threadable , JsonSerializable {
         return $note;
     }
 
-    // Threadable interface
-    function postThreadEntry($type, $vars, $options=array()) {
-        $errors = array();
-        switch ($type) {
-        case 'M':
-            return $this->postMessage($vars, $vars['origin']);
-        case 'N':
-            return $this->postNote($vars, $errors);
-        case 'R':
-            return $this->postReply($vars, $errors);
-        }
-    }
 
     // Print ticket... export the ticket thread as PDF.
     function pdfExport($psize='Letter', $notes=false, $events=false) {
