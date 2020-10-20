@@ -457,6 +457,10 @@ EOF;
         return $base;
     }
 
+    static function supportsCustomData() {
+        return true;
+    }
+
 }
 
 RolePermission::register(/* @trans */ 'Tickets', TicketModel::getPermissions(), true);
@@ -2493,9 +2497,6 @@ implements RestrictedAccess, Threadable , JsonSerializable {
     }
 
 
-    static function supportsCustomData() {
-        return true;
-    }
 
     //Replace base variables.
     function replaceVars($input, $vars = array()) {
