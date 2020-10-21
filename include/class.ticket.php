@@ -48,9 +48,9 @@ implements RestrictedAccess, Threadable, Searchable {
                 'constraint' => array('user_id' => 'User.id'),
                 'null' => true,
             ),
-/*            'status' => array(
+            'status' => array(
                 'constraint' => array('status_id' => 'TicketStatus.id')
-            ),*/
+            ),
             'lock' => array(
                 'constraint' => array('lock_id' => 'Lock.lock_id'),
                 'null' => true,
