@@ -56,7 +56,7 @@ class UserModel extends VerySimpleModel {
             ),
             'tickets' => array(
                 'null' => true,
-                'reverse' => 'Ticket.user',
+                'reverse' => 'TicketModel.user',
             ),
             'account' => array(
                 'list' => false,
