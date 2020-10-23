@@ -364,11 +364,23 @@ class TicketApiController extends ApiController {
     
     public function getTopics($format) {
         //This API request does not need to provide user identifier.
-        if(!($key=$this->requireApiKey()) || !$key->canViewTopics())
-            return $this->exerr(401, __('API key not authorized'));
-        $this->response(200, json_encode($this->createList(Topic::getPublicHelpTopics(), 'id', 'value')));
+        if(!($key=$this->requireApiKey()) /*|| !$key->canViewTopics()*/){
+            $result = array('tickets'=> array() ,'status_code' => 'FAILURE', 'status_msg' => 'API key not authorized'); 
+            $this->response(500, json_encode($result),
+                $contentType="application/json");
+        }else{
+            $result =  array('topics'=> $this->createList(Topic::getPublicHelpTopics(), 'id', 'value') ,'status_code' => '0', 'status_msg' => 'success');
+            $this->response(200, json_encode($result));
+        }
     }
     
+    private function createList($items, $idName, $valueName) {
+        $list=[];
+        foreach($items as $key=>$value) {
+            $list[]=[$idName=>$key, $valueName=>$value];
+        }
+        return $list;
+    }    
     //staff replies to client ticket with the updated status
     function postReply($format) {
         try{
