@@ -424,6 +424,46 @@ class TicketApiController extends ApiController {
         }
     }
     
+    //staff replies to client ticket with the updated status
+    function postMessage($format) {
+        try{
+          if(!($key=$this->requireApiKey()) )
+            return $this->exerr(401, __('API key not authorized'));
+            
+            $data = $this->getRequest($format);
+            
+            # Checks for existing ticket with that number
+            $id = Ticket::getIdByNumber($data['ticketNumber']);
+            if ($id <= 0)
+                return $this->response(404, __("Ticket not found"));
+            
+            $data['userId']=User::lookupByEmail($data['email']);
+            
+            $ticket=Ticket::lookup($id);
+            $errors = array();
+            $response = $ticket->postMessage($data , 'API' , false);
+            
+            
+            if(!$response)
+                return $this->exerr(500, __("Unable to reply to this ticket: unknown error"));
+                
+                $location_base = '/api/tickets/postMessage';
+               // header('Location: '.$location_base.$ticket->getNumber());
+               // $this->response(201, $ticket->getNumber());
+                $result =  array( 'status_code' => '0', 'status_msg' => 'reply posted successfully');
+                $result_code=200;
+                $this->response($result_code, json_encode($result ),
+                    $contentType="application/json");
+                
+    }
+        catch ( Throwable $e){
+            $msg = $e-> getMessage();
+            $result =  array('tickets'=> array() ,'status_code' => 'FAILURE', 'status_msg' => $msg);
+            $this->response(500, json_encode($result),
+                $contentType="application/json");
+        }
+    }
+
 
  }
 

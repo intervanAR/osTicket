@@ -26,6 +26,7 @@ $dispatcher = patterns('',
     url_post("^/tickets\.(?P<format>xml|json|email)$", array('api.tickets.php:TicketApiController','create')),
 
     url_post("^/tickets/reply\.(?P<format>json)$", array('api.tickets.php:TicketApiController','postReply')),
+    url_post("^/tickets/message\.(?P<format>json)$", array('api.tickets.php:TicketApiController','postMessage')),
 
     // RESTful
     url_get("^/tickets$", array('api.tickets.php:TicketApiController','restGetTickets')),
