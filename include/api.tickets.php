@@ -441,19 +441,18 @@ class TicketApiController extends ApiController {
             
             $ticket=Ticket::lookup($id);
             $errors = array();
-            $response = $ticket->postMessage($data , 'API' , false);
-            
+            $response = $ticket->postMessage($data , 'API' , false);            
             
             if(!$response)
                 return $this->exerr(500, __("Unable to reply to this ticket: unknown error"));
                 
-                $location_base = '/api/tickets/postMessage';
-               // header('Location: '.$location_base.$ticket->getNumber());
-               // $this->response(201, $ticket->getNumber());
-                $result =  array( 'status_code' => '0', 'status_msg' => 'reply posted successfully');
-                $result_code=200;
-                $this->response($result_code, json_encode($result ),
-                    $contentType="application/json");
+            $location_base = '/api/tickets/postMessage';
+           // header('Location: '.$location_base.$ticket->getNumber());
+           // $this->response(201, $ticket->getNumber());
+            $result =  array( 'status_code' => '0', 'status_msg' => 'reply posted successfully');
+            $result_code=200;
+            $this->response($result_code, json_encode($result ),
+                $contentType="application/json");
                 
     }
         catch ( Throwable $e){
