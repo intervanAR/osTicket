@@ -437,7 +437,7 @@ class TicketApiController extends ApiController {
             if ($id <= 0)
                 return $this->response(404, __("Ticket not found"));
             
-            $data['userId']=User::lookupByEmail($data['email']);
+            $data['userId']=User::lookupByEmail($data['email'])->getId();
             
             $ticket=Ticket::lookup($id);
             $errors = array();
