@@ -1,4 +1,4 @@
-<?php
+get<?php
 
 include_once INCLUDE_DIR.'class.api.php';
 include_once INCLUDE_DIR.'class.ticket.php';
@@ -212,7 +212,21 @@ class TicketApiController extends ApiController {
             $ticket = new Ticket(0);
             //$ticket->load($id);
             $ticket=Ticket::lookup($id);
-    
+
+            $types = array('M', 'R');
+            $thread = $ticket->getThreadEntries($types);
+            $a = array();
+            foreach ($thread as $tentry) {
+                print( "Thread Id:".$tentry->getId() );
+
+                /* $thread_attachments = array();
+                foreach (Attachment::objects()->filter(array(
+                    'thread_entry__thread__id' => $this->getId(),
+                    ))->select_related('thread_entry', 'file') as $att) {
+                    $thread_attachments[$att->object_id][] = $att;
+                }*/
+            }
+
             $result =  array('ticket'=> $ticket ,'status_code' => '0', 'status_msg' => 'ticket details retrieved successfully');
             $result_code=200;
             $this->response($result_code, json_encode($result ),
