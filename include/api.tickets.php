@@ -219,12 +219,14 @@ class TicketApiController extends ApiController {
             foreach ($thread as $tentry) {
                 print( "Thread Id:".$tentry->getId() );
 
-                /* $thread_attachments = array();
+                $thread_attachments = array();
                 foreach (Attachment::objects()->filter(array(
-                    'thread_entry__thread__id' => $this->getId(),
+                    'thread_entry__thread__id' => $tentry->getId(),
                     ))->select_related('thread_entry', 'file') as $att) {
                     $thread_attachments[$att->object_id][] = $att;
-                }*/
+                }
+                print_r($thread_attachments,true);
+                print( "\n");
             }
 
             $result =  array('ticket'=> $ticket ,'status_code' => '0', 'status_msg' => 'ticket details retrieved successfully');
