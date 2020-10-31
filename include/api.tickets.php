@@ -223,7 +223,7 @@ class TicketApiController extends ApiController {
                     'thread_entry' => $tentry->getId() 
                     ))->select_related('thread_entry', 'file') as $att) {
                     $thread_attachments[$att->object_id][] = $att;
-                    print_r($att,true);
+                    print($att->getFilename() );
                     print( "\n");
                 }
                 print( "\n");
