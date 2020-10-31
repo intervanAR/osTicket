@@ -220,7 +220,7 @@ class TicketApiController extends ApiController {
                 print( "Thread Entry Id:".$tentry->getId() ." Thread Id:".$ticket->getThread()->getId() );
                 $thread_attachments = array();
                 foreach (Attachment::objects()->filter(array(
-                    'thread_entry' => $tentry->getId(), 'thread_id'=>$ticket->getThread()->getId() 
+                    'thread_entry' => $tentry->getId() 
                     ))->select_related('thread_entry', 'file') as $att) {
                     $thread_attachments[$att->object_id][] = $att;
                     print_r($att,true);
