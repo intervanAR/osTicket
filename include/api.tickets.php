@@ -216,16 +216,18 @@ class TicketApiController extends ApiController {
             $types = array('M', 'R');
             $thread = $ticket->getThreadEntries($types);
             $a = array();
+            // Precache all the attachments on this thread
+            AttachmentFile::objects()->filter(array( 'attachments__thread_entry__thread__id' => $ticket->getThread()->getId() ))->all();
             foreach ($thread as $tentry) {
                 print( "Thread Id:".$tentry->getId() );
-
                 $thread_attachments = array();
                 foreach (Attachment::objects()->filter(array(
                     'thread_entry__thread__id' => $tentry->getId(),
                     ))->select_related('thread_entry', 'file') as $att) {
                     $thread_attachments[$att->object_id][] = $att;
+                    print_r($att,true);
+                    print( "\n");
                 }
-                print_r($thread_attachments,true);
                 print( "\n");
             }
 
