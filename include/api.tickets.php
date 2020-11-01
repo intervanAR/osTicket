@@ -223,13 +223,9 @@ class TicketApiController extends ApiController {
                     'thread_entry' => $tentry->getId() 
                     ))->select_related('thread_entry', 'file') as $att) {
                     $thread_attachments[$att->object_id][] = $att;
-                    foreach ($atts as $A) {
-                        if (!$A->inline)
-                            continue;
-                        print( $A->file->getDownloadUrl(['id' =>$A->getId()])." filename:".
-                             $A->getFilename()
+                    print( $att->file->getDownloadUrl(['id' =>$att->getId()])." filename:".
+                             $att->getFilename()
                         );
-                    }
                     print( "\n");
                 }
                 print( "\n");
