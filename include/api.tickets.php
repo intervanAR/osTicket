@@ -226,8 +226,8 @@ class TicketApiController extends ApiController {
                     foreach ($atts as $A) {
                         if (!$A->inline)
                             continue;
-                        print( $A->file->getDownloadUrl(['id' =>$A->getId()])." ".
-                            'filename' => $A->getFilename()
+                        print( $A->file->getDownloadUrl(['id' =>$A->getId()])." filename:".
+                             $A->getFilename()
                         );
                     }
                     print( "\n");
