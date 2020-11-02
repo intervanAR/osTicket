@@ -364,7 +364,6 @@ class TicketApiController extends ApiController {
                 array_push($tickets, $ticket);
             }
             
-
             $result_code = 200;
             $result =  array('tickets'=> $tickets ,'status_code' => '0', 'status_msg' => 'success');
             
