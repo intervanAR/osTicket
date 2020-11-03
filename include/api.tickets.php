@@ -1,4 +1,4 @@
-get<?php
+<?php
 
 include_once INCLUDE_DIR.'class.api.php';
 include_once INCLUDE_DIR.'class.ticket.php';
