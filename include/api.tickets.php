@@ -198,9 +198,7 @@ class TicketApiController extends ApiController {
              
             # Checks for valid ticket number
             if (!is_numeric($ticket_number))
-                return $this->response(404, __("Invalid ticket number"));
-    
-            
+                return $this->response(404, __("Invalid ticket number"));            
     
             # Checks for existing ticket with that number
             $id = Ticket::getIdByNumber($ticket_number);
@@ -213,6 +211,18 @@ class TicketApiController extends ApiController {
             //$ticket->load($id);
             $ticket=Ticket::lookup($id);
 
+            // The second parameter of json_decode forces parsing into an associative array
+            $array_tckt = json_decode(json_encode($ticket), true);
+
+            foreach ($array_tckt["thread_entries"] as $thri => $tentry) {
+                # code...
+                $files = array();
+                foreach (Attachment::objects()->filter(array( 'thread_entry' => $tentry["id"] ))->select_related('thread_entry', 'file') as $att) {
+                    $files[] = array( "id"=>$att->file->getId(),"mime_type"=>$att->file->getMimeType(),"name"=>$att->getFilename());
+                }
+                $array_tckt["thread_entries"][$thri]["files"]=$files;
+            }
+/*
             $types = array('M', 'R');
             $thread = $ticket->getThreadEntries($types);
             // Precache all the attachments on this thread
@@ -230,8 +240,8 @@ class TicketApiController extends ApiController {
                 }
                 print( "\n");
             }
-
-            $result =  array('ticket'=> $ticket ,'status_code' => '0', 'status_msg' => 'ticket details retrieved successfully');
+*/
+            $result =  array('ticket'=> $array_tckt ,'status_code' => '0', 'status_msg' => 'ticket details retrieved successfully');
             $result_code=200;
             $this->response($result_code, json_encode($result ),
                 $contentType="application/json");
@@ -480,6 +490,38 @@ class TicketApiController extends ApiController {
         }
     }
 
+    function downloadFile() {
+       try{
+            if(!($key=$this->requireApiKey()))
+                return $this->exerr(401, __('API key not authorized'));
+        
+    
+             $fileId = $_REQUEST['fileId'];
+             if (! ($fileId))
+                 return $this->exerr(422, __('missing fileId parameter '));
+             
+            # Checks for valid ticket number
+            if (!is_numeric($fileId))
+                return $this->response(404, __("Invalid fileId number"));
+    
+            
+            $fileId = $fileId+0;
+            # Checks for existing ticket with that number
+            if( !($file = AttachmentFile::lookup($fileId)) )
+                return $this->response(404, __("File not found"));
+
+            # Load ticket and send response
+
+            $file->download();            
+     }
+     catch ( Throwable $e){
+             $msg = $e-> getMessage();
+             $result =  array('ticket'=> array() ,'status_code' => 'FAILURE', 'status_msg' => $msg);
+             $this->response(500, json_encode($result),
+                 $contentType="application/json");
+     }
+
+    }
 
  }
 
