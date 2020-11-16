@@ -396,7 +396,10 @@ class TicketApiController extends ApiController {
             $this->response(500, json_encode($result),
                 $contentType="application/json");
         }else{
-            $result =  array('topics'=> $this->createList(Topic::getPublicHelpTopics(), 'id', 'value') ,'status_code' => '0', 'status_msg' => 'success');
+            $topics = Topic::objects()->filter("isPublic"=>1)->all();
+            
+            $result =  array('topics'=> $topics ,'status_code' => '0', 'status_msg' => 'success');
+            //$result =  array('topics'=> $this->createList(Topic::getPublicHelpTopics(), 'id', 'value') ,'status_code' => '0', 'status_msg' => 'success');
             $this->response(200, json_encode($result));
         }
     }
