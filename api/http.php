@@ -27,6 +27,7 @@ $dispatcher = patterns('',
 
     url_post("^/tickets/reply\.(?P<format>json)$", array('api.tickets.php:TicketApiController','postReply')),
     url_post("^/tickets/message\.(?P<format>json)$", array('api.tickets.php:TicketApiController','postMessage')),
+    url_post("^/tickets/postData\.(?P<format>json)$", array('api.tickets.php:TicketApiController','postData')),
     url_get("^/tickets/downloadFile$", array('api.tickets.php:TicketApiController','downloadFile')),
 
     // RESTful

@@ -195,24 +195,50 @@ class TicketApiController extends ApiController {
              $ticket_number = $_REQUEST['ticketNumber'];
              if (! ($ticket_number))
                  return $this->exerr(422, __('missing ticketNumber parameter '));
-             
+/*             
             # Checks for valid ticket number
             if (!is_numeric($ticket_number))
                 return $this->response(404, __("Invalid ticket number"));            
-    
+  */  
             # Checks for existing ticket with that number
             $id = Ticket::getIdByNumber($ticket_number);
             
     
             if ($id <= 0)
                 return $this->response(404, __("Ticket not found"));
-            # Load ticket and send response
-            $ticket = new Ticket(0);
-            //$ticket->load($id);
+
             $ticket=Ticket::lookup($id);
+
+            $dynamicfields = array();
+
+            foreach (DynamicFormEntry::forTicket($ticket->getId()) as $i=>$form) {
+                // Skip core fields shown earlier in the ticket view
+                $answers = $form->getAnswers();
+                // Skip display of forms without any answers
+                foreach ($answers as $j=>$a) {
+                    //print$a->getField());
+                    $dynamicfields[$a->getField()->get("name")] = $a->getValue();
+                    //print($a->getField()->get("name"). " " . $a->getValue()."\n"); 
+                }
+            }
+
+            /*foreach (DynamicFormEntry::forTicket($ticket->getId()) as $i=>$form) {
+                // Skip core fields shown earlier in the ticket view
+                $answers = $form->getAnswers();
+                // Skip display of forms without any answers
+                foreach ($answers as $j=>$a) {
+                    //print$a->getField());
+                    $dynamicfields[$a->getField()->get("name")] = $a->getValue();
+                    //print($a->getField()->get("name"). " " . $a->getValue()."\n"); 
+                }
+            }*/
 
             // The second parameter of json_decode forces parsing into an associative array
             $array_tckt = json_decode(json_encode($ticket), true);
+
+            if( sizeof($dynamicfields)>0 ){
+                $array_tckt["dynamicFields"] = $dynamicfields;
+            }
 
             foreach ($array_tckt["thread_entries"] as $thri => $tentry) {
                 # code...
@@ -396,9 +422,43 @@ class TicketApiController extends ApiController {
             $this->response(500, json_encode($result),
                 $contentType="application/json");
         }else{
-            $topics = Topic::objects()->filter("isPublic"=>1)->all();
-            
-            $result =  array('topics'=> $topics ,'status_code' => '0', 'status_msg' => 'success');
+
+
+            $topics =Topic::objects()->filter()->all();
+
+            $activeTopics = array(); 
+            $arr_topics = json_decode(json_encode($topics), true); 
+
+            $json_exp = "/\{.*\}/";
+
+            foreach ($arr_topics as $key => $topic) {
+                # code...
+                $parametros=null;
+                $notes = str_replace("\\","",$topic["ht"]["notes"]);
+                if( preg_match( $json_exp , $notes , $coincidencia )){
+                    $parametros=$coincidencia[0];
+                }
+                if( $topic["ht"]["flags"] & 0x0002  ) // Active
+                    if(isset($parametros))
+                        array_push($activeTopics, array("topicId"=>$topic["ht"]["topic_id"], "topic"=>$topic["ht"]["topic"], 
+                        "parameters"=>json_decode($parametros,true)));
+                    else
+                        array_push($activeTopics, array("topicId"=>$topic["ht"]["topic_id"], "topic"=>$topic["ht"]["topic"]));
+            }
+
+            //$activeTopics = json_decode(json_encode($topics), true);
+            //print_r($activeTopics,true);
+            // print("Hola");
+            //$activeTopics = array();            
+            /*foreach ($topics as $key => $topic) {
+                # code...
+                print(json_encode($topic["ht"]));
+                if($topic->isActive() && $topic->isActive() ){                    
+                    array_push($activeTopics, array("topicId"=>$topic->getId(), "topic"=>$topic->getFullName()));
+                }
+            }
+            */
+            $result =  array('topics'=> $activeTopics ,'status_code' => '0', 'status_msg' => 'success');
             //$result =  array('topics'=> $this->createList(Topic::getPublicHelpTopics(), 'id', 'value') ,'status_code' => '0', 'status_msg' => 'success');
             $this->response(200, json_encode($result));
         }
@@ -481,6 +541,78 @@ class TicketApiController extends ApiController {
            // $this->response(201, $ticket->getNumber());
             $result =  array( 'status_code' => '0', 'status_msg' => 'reply posted successfully');
             $result_code=200;
+            $this->response($result_code, json_encode($result ),
+                $contentType="application/json");
+                
+    }
+        catch ( Throwable $e){
+            $msg = $e-> getMessage();
+            $result =  array('tickets'=> array() ,'status_code' => 'FAILURE', 'status_msg' => $msg);
+            $this->response(500, json_encode($result),
+                $contentType="application/json");
+        }
+    }
+
+    //staff replies to client ticket with the updated status
+    function postData($format) {
+        try{
+
+          if(!($key=$this->requireApiKey()) )
+            return $this->exerr(401, __('API key not authorized'));
+            
+            $data = $this->getRequest($format);
+
+            # Checks for existing ticket with that number
+            $id = Ticket::getIdByNumber($data['number']);
+            if ($id <= 0)
+                return $this->response(404, __("Ticket not found"));
+            
+            $ticket = Ticket::lookup($id);
+
+            $answers = $ticket->loadDynamicData();
+
+            if( isset( $answers[$data["fieldName"]] ) && isset($data["fieldData"])){
+                $answers[$data["fieldName"]]->setValue($data["fieldData"] );
+                if(!$answers[$data["fieldName"]]->save()) print("Error actualizando Ticket");
+            }
+/*
+            // Buscar el campo por nombre
+            foreach ($answers as $j=>$a) {
+                print("$j\n");
+                //print($a->getField()->get("name")."\n");
+                if( $a->getField()->get("name")===$data["fieldName"]){
+                    print( "Campo:" . $a->getField()->getValue());
+                }
+            }
+            //$answer  = $ticket->getAnswer($data['fieldName']);
+
+            # Pull off some meta-data
+            $alert       = (bool) (isset($data['alert'])       ? $data['alert']       : true);
+            $autorespond = (bool) (isset($data['autorespond']) ? $data['autorespond'] : true);
+
+            # Assign default value to source if not defined, or defined as NULL
+            $data['source'] = isset($data['source']) ? $data['source'] : 'API';
+
+            # Create the ticket with the data (attempt to anyway)
+            $errors = array();
+
+            $thisstaff = StaffAuthenticationBackend::getUser();
+            $result = $ticket->update($data, $errors);
+            # Return errors (?)
+*/
+
+            $result_code=200;
+            $result =  array( 'status_code' => '0', 'status_msg' => 'data posted successfully');
+
+            if (count($errors)) {
+
+                $result_code=500;
+                $result =  array( 'status_code' => '500', 'status_msg' => json_encode($errors));
+
+            } elseif (!$result) {
+                $result_code=500;
+                $result =  array( 'status_code' => '500', 'status_msg' =>"Error actalizado Ticket");
+            }
             $this->response($result_code, json_encode($result ),
                 $contentType="application/json");
                 
