@@ -436,12 +436,13 @@ class TicketApiController extends ApiController {
                 $parametros=null;
                 $notes = str_replace("\\","",$topic["ht"]["notes"]);
                 if( preg_match( $json_exp , $notes , $coincidencia )){
-                    $parametros=$coincidencia[0];
+                    $parametros=str_replace("<br />", "", $coincidencia[0]);
                 }
                 if( $topic["ht"]["flags"] & 0x0002  ) // Active
-                    if(isset($parametros))
+                    if(isset($parametros)){                        
                         array_push($activeTopics, array("topicId"=>$topic["ht"]["topic_id"], "topic"=>$topic["ht"]["topic"], 
                         "parameters"=>json_decode($parametros,true)));
+                    }
                     else
                         array_push($activeTopics, array("topicId"=>$topic["ht"]["topic_id"], "topic"=>$topic["ht"]["topic"]));
             }
