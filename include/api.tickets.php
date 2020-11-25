@@ -561,46 +561,32 @@ class TicketApiController extends ApiController {
           if(!($key=$this->requireApiKey()) )
             return $this->exerr(401, __('API key not authorized'));
             
-            $data = $this->getRequest($format);
+            $vars = $this->getRequest($format);
 
             # Checks for existing ticket with that number
-            $id = Ticket::getIdByNumber($data['number']);
-            if ($id <= 0)
+            $ticketId = Ticket::getIdByNumber($vars['ticketNumber']);
+
+            if ($ticketId <= 0)
                 return $this->response(404, __("Ticket not found"));
-            
-            $ticket = Ticket::lookup($id);
 
-            $answers = $ticket->loadDynamicData();
+            $forms = DynamicFormEntry::forTicket($ticketId);
+            foreach ($forms as $form) {
+                $guardar = false; 
+    
+                $form->addMissingFields();
 
-            if( isset( $answers[$data["fieldName"]] ) && isset($data["fieldData"])){
-                $answers[$data["fieldName"]]->setValue($data["fieldData"] );
-                if(!$answers[$data["fieldName"]]->save()) print("Error actualizando Ticket");
-            }
-/*
-            // Buscar el campo por nombre
-            foreach ($answers as $j=>$a) {
-                print("$j\n");
-                //print($a->getField()->get("name")."\n");
-                if( $a->getField()->get("name")===$data["fieldName"]){
-                    print( "Campo:" . $a->getField()->getValue());
+                foreach ( $vars["dynamicFields"] as $key => $value ) {
+
+                    $answer = $form->getAnswer($value["fieldName"]);
+                    if( $answer ){
+                        $answer->setValue($value["fieldData"]);
+                        $guardar = true;
+                    }
+                }
+                if($guardar){
+                    $form->saveAnswers();    
                 }
             }
-            //$answer  = $ticket->getAnswer($data['fieldName']);
-
-            # Pull off some meta-data
-            $alert       = (bool) (isset($data['alert'])       ? $data['alert']       : true);
-            $autorespond = (bool) (isset($data['autorespond']) ? $data['autorespond'] : true);
-
-            # Assign default value to source if not defined, or defined as NULL
-            $data['source'] = isset($data['source']) ? $data['source'] : 'API';
-
-            # Create the ticket with the data (attempt to anyway)
-            $errors = array();
-
-            $thisstaff = StaffAuthenticationBackend::getUser();
-            $result = $ticket->update($data, $errors);
-            # Return errors (?)
-*/
 
             $result_code=200;
             $result =  array( 'status_code' => '0', 'status_msg' => 'data posted successfully');
