@@ -239,6 +239,7 @@ class TicketApiController extends ApiController {
             if( sizeof($dynamicfields)>0 ){
                 $array_tckt["dynamicFields"] = $dynamicfields;
             }
+            $array_tckt["topic_id"] = $ticket->getTopicId();
 
             foreach ($array_tckt["thread_entries"] as $thri => $tentry) {
                 # code...
