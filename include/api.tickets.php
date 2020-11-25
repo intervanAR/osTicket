@@ -558,8 +558,8 @@ class TicketApiController extends ApiController {
     function postData($format) {
         try{
 
-          if(!($key=$this->requireApiKey()) )
-            return $this->exerr(401, __('API key not authorized'));
+            if(!($key=$this->requireApiKey()) )
+                return $this->exerr(401, __('API key not authorized'));
             
             $vars = $this->getRequest($format);
 
@@ -570,11 +570,30 @@ class TicketApiController extends ApiController {
                 return $this->response(404, __("Ticket not found"));
 
             $forms = DynamicFormEntry::forTicket($ticketId);
+
             foreach ($forms as $form) {
+                // Recorro los campos
+                foreach ($form->getFields() as $field) {
+                    if ($field->isEnabled()
+                        && !$field->isPresentationOnly()
+                      //  && $field->hasData()
+                        && $field->isStorable()
+                    ) {
+                        foreach ( $vars["dynamicFields"] as $key => $value ) {
+                            if( $field->get('name') === $value["fieldName"] ){
+                                $a = new DynamicFormEntryAnswer(
+                                    array('field_id'=>$field->get('id'), 'entry'=>$form));
+                                // Add to list of answers
+                                $form->getAnswers()->add($a);
+                                $a->save();
+
+                            }
+                        }
+
+                    }
+                }
                 $guardar = false; 
     
-                $form->addMissingFields();
-
                 foreach ( $vars["dynamicFields"] as $key => $value ) {
 
                     $answer = $form->getAnswer($value["fieldName"]);
@@ -587,7 +606,6 @@ class TicketApiController extends ApiController {
                     $form->saveAnswers();    
                 }
             }
-
             $result_code=200;
             $result =  array( 'status_code' => '0', 'status_msg' => 'data posted successfully');
 
