@@ -217,7 +217,7 @@ class TicketApiController extends ApiController {
                 // Skip display of forms without any answers
                 foreach ($answers as $j=>$a) {
                     //print$a->getField());
-                    $dynamicfields[$a->getField()->get("name")] = $a->getValue();
+                    $dynamicfields[$a->getField()->get("name")] = sizeof($a->getValue())>0 ? $a->getValue() : null;
                     //print($a->getField()->get("name"). " " . $a->getValue()."\n"); 
                 }
             }
