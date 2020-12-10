@@ -360,13 +360,9 @@ class TicketApiController extends ApiController {
         
         $tickets = array();
         foreach ($myTickets as $ticket) {
-            array_push($tickets, $ticket);
-            
+            array_push($tickets, $ticket);            
         }
 
-        
-         
-  
             $result_code = 200;
             $result =  array('tickets'=> $tickets ,'status_code' => '0', 'status_msg' => 'success');
             $this->response($result_code, json_encode($result),
@@ -397,10 +393,13 @@ class TicketApiController extends ApiController {
             $myTickets = Ticket::objects()->filter(array('user_id' => $user->getId()))->all();
             
             $tickets = array();
+
             foreach ($myTickets as $ticket) {
-                array_push($tickets, $ticket);
+                $thisTicket = json_decode(json_encode($ticket), true);
+                $thisTicket["topic_id"] = $ticket->getTopicId();
+                array_push($tickets, $thisTicket);
             }
-            
+
             $result_code = 200;
             $result =  array('tickets'=> $tickets ,'status_code' => '0', 'status_msg' => 'success');
             
