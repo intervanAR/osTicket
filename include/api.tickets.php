@@ -14,7 +14,10 @@ class TicketApiController extends ApiController {
             "attachments" => array("*" =>
                 array("name", "type", "data", "encoding", "size")
             ),
-            "message", "ip", "priorityId",
+            "message", "ip", "priorityId","ticketNumber",
+            "dynamicFields"=>array(
+                "*" => array("fieldName","fieldData")
+            ),
             "system_emails" => array(
                 "*" => "*"
             ),
@@ -217,21 +220,11 @@ class TicketApiController extends ApiController {
                 // Skip display of forms without any answers
                 foreach ($answers as $j=>$a) {
                     //print$a->getField());
-                    $dynamicfields[$a->getField()->get("name")] = sizeof($a->getValue())>0 ? $a->getValue() : null;
+                    $dynamicfields[$a->getField()->get("name")] = sizeof($a->getValue())>0 && $a->getValue()!=="" ? $a->getValue() : null;
                     //print($a->getField()->get("name"). " " . $a->getValue()."\n"); 
                 }
             }
 
-            /*foreach (DynamicFormEntry::forTicket($ticket->getId()) as $i=>$form) {
-                // Skip core fields shown earlier in the ticket view
-                $answers = $form->getAnswers();
-                // Skip display of forms without any answers
-                foreach ($answers as $j=>$a) {
-                    //print$a->getField());
-                    $dynamicfields[$a->getField()->get("name")] = $a->getValue();
-                    //print($a->getField()->get("name"). " " . $a->getValue()."\n"); 
-                }
-            }*/
 
             // The second parameter of json_decode forces parsing into an associative array
             $array_tckt = json_decode(json_encode($ticket), true);
@@ -569,9 +562,11 @@ class TicketApiController extends ApiController {
             if ($ticketId <= 0)
                 return $this->response(404, __("Ticket not found"));
 
+
             $forms = DynamicFormEntry::forTicket($ticketId);
 
             foreach ($forms as $form) {
+                $guardar = false; 
                 // Recorro los campos
                 foreach ($form->getFields() as $field) {
                     if ($field->isEnabled()
@@ -585,14 +580,14 @@ class TicketApiController extends ApiController {
                                     array('field_id'=>$field->get('id'), 'entry'=>$form));
                                 // Add to list of answers
                                 $form->getAnswers()->add($a);
-                                $a->save();
-
+                                //$a->save();
+                                $guardar = true;
                             }
                         }
 
                     }
                 }
-                $guardar = false; 
+                
     
                 foreach ( $vars["dynamicFields"] as $key => $value ) {
 
@@ -600,12 +595,14 @@ class TicketApiController extends ApiController {
                     if( $answer ){
                         $answer->setValue($value["fieldData"]);
                         $guardar = true;
+                        $answer->save();
                     }
                 }
                 if($guardar){
                     $form->saveAnswers();    
                 }
             }
+
             $result_code=200;
             $result =  array( 'status_code' => '0', 'status_msg' => 'data posted successfully');
 
