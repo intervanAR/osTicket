@@ -14,7 +14,7 @@ class TicketApiController extends ApiController {
             "attachments" => array("*" =>
                 array("name", "type", "data", "encoding", "size")
             ),
-            "message", "ip", "priorityId","ticketNumber",
+            "message", "ip", "priorityId","ticketNumber","reply_status",
             "dynamicFields"=>array(
                 "*" => array("fieldName","fieldData")
             ),
@@ -482,7 +482,10 @@ class TicketApiController extends ApiController {
             $staff = Staff::lookup(array('username'=>$data['staffUserName']));
             $data['staffId']= $staff -> getId();
             $data['poster'] = $staff;
-            
+            if( isset($data["reply_status"]) && ($new_status = TicketStatus::lookup(array("name"=>$data["reply_status"])))){
+                $data["reply_status_id"] = $new_status->getId();
+            }
+
             $ticket=Ticket::lookup($id);
             $errors = array();
             $response = $ticket->postReply($data , $errors);
