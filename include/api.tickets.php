@@ -430,30 +430,17 @@ class TicketApiController extends ApiController {
                 $notes = str_replace("\\","",$topic["ht"]["notes"]);
                 if( preg_match( $json_exp , $notes , $coincidencia )){
                     $parametros=str_replace("<br />", "", $coincidencia[0]);
+                    $notes=str_replace($coincidencia[0], "", $notes );
                 }
-                if( $topic["ht"]["flags"] & 0x0002  ) // Active
-                    if(isset($parametros)){                        
-                        array_push($activeTopics, array("topicId"=>$topic["ht"]["topic_id"], "topic"=>$topic["ht"]["topic"], 
-                        "parameters"=>json_decode($parametros,true)));
-                    }
-                    else
-                        array_push($activeTopics, array("topicId"=>$topic["ht"]["topic_id"], "topic"=>$topic["ht"]["topic"]));
+                if(isset($parametros)){                        
+                    array_push($activeTopics, array("topicId"=>$topic["ht"]["topic_id"], "topicPId"=>$topic["ht"]["topic_pid"], "topic"=>$topic["ht"]["topic"],"parameters"=>json_decode($parametros,true),"notes"=>$notes,"active"=>($topic["ht"]["flags"] & 0x0002 ? 'S':'N' ) )) ;
+                }
+                else{                    
+                    array_push($activeTopics, array("topicId"=>$topic["ht"]["topic_id"], "topicPId"=>$topic["ht"]["topic_pid"], "topic"=>$topic["ht"]["topic"],"parameters"=>json_decode($parametros,true),"notes"=>$notes,"active"=>($topic["ht"]["flags"] & 0x0002 ? 'S' : 'N') ));
+                }
             }
 
-            //$activeTopics = json_decode(json_encode($topics), true);
-            //print_r($activeTopics,true);
-            // print("Hola");
-            //$activeTopics = array();            
-            /*foreach ($topics as $key => $topic) {
-                # code...
-                print(json_encode($topic["ht"]));
-                if($topic->isActive() && $topic->isActive() ){                    
-                    array_push($activeTopics, array("topicId"=>$topic->getId(), "topic"=>$topic->getFullName()));
-                }
-            }
-            */
             $result =  array('topics'=> $activeTopics ,'status_code' => '0', 'status_msg' => 'success');
-            //$result =  array('topics'=> $this->createList(Topic::getPublicHelpTopics(), 'id', 'value') ,'status_code' => '0', 'status_msg' => 'success');
             $this->response(200, json_encode($result));
         }
     }
